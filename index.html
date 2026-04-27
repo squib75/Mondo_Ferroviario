@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selezione Parole - Rosso/Blu</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, rgba(255,255,255,0.08) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .colonna {
+            width: 300px;
+            padding: 30px 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: relative;
+            z-index: 1;
+        }
+
+        #colonna-rossa {
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(10px);
+            border-right: none;
+            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15), inset -1px 0 0 rgba(220, 38, 38, 0.3);
+        }
+
+        #colonna-blu {
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(10px);
+            border-left: none;
+            box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15), inset 1px 0 0 rgba(37, 99, 235, 0.3);
+        }
+
+        .colonna h2 {
+            margin-bottom: 20px;
+            font-size: 20px;
+            text-align: center;
+            padding: 16px 12px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        #colonna-rossa h2 {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+        }
+
+        #colonna-blu h2 {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        }
+
+        #area-carte {
+            flex: 1;
+            position: relative;
+            padding: 20px;
+            z-index: 0;
+        }
+
+        .carta {
+            position: absolute;
+            background: linear-gradient(to bottom, #ffffff 0%, #fafafa 100%);
+            padding: 14px 24px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12),
+                        0 2px 4px rgba(0, 0, 0, 0.08),
+                        0 8px 16px rgba(0, 0, 0, 0.06);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 16px;
+            font-weight: 500;
+            user-select: none;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            white-space: nowrap;
+            text-align: center;
+            min-width: 200px;
+        }
+
+        .carta:hover {
+            transform: translate(-50%, -50%) scale(1.08) translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18),
+                        0 6px 12px rgba(0, 0, 0, 0.12),
+                        0 16px 32px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+            background: linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%);
+        }
+
+        .carta.nascosta {
+            opacity: 0;
+            pointer-events: none;
+            transform: translate(-50%, -50%) scale(0.8);
+        }
+
+        .carta-colonna {
+            background: linear-gradient(to bottom, #ffffff 0%, #f9fafb 100%);
+            padding: 14px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08),
+                        0 1px 2px rgba(0, 0, 0, 0.06);
+            font-size: 15px;
+            font-weight: 500;
+            border: 1px solid rgba(0, 0, 0, 0.04);
+            position: relative;
+        }
+
+        .carta-colonna::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            border-radius: 8px 0 0 8px;
+            transition: width 0.25s ease;
+        }
+
+        .carta-colonna.rossa::before {
+            background: linear-gradient(to bottom, #dc2626, #b91c1c);
+        }
+
+        .carta-colonna.blu::before {
+            background: linear-gradient(to bottom, #2563eb, #1d4ed8);
+        }
+
+        .carta-colonna.verde {
+            background: linear-gradient(to bottom, #d1fae5 0%, #a7f3d0 100%);
+            font-weight: 600;
+            box-shadow: 0 3px 6px rgba(16, 185, 129, 0.2),
+                        0 1px 3px rgba(16, 185, 129, 0.15);
+        }
+
+        .carta-colonna.verde::before {
+            background: linear-gradient(to bottom, #10b981, #059669) !important;
+            width: 5px;
+        }
+
+        .carta-colonna.barrata {
+            text-decoration: line-through;
+            opacity: 0.5;
+            background: linear-gradient(to bottom, #f3f4f6 0%, #e5e7eb 100%);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+        }
+
+        .carta-colonna:hover {
+            transform: translateX(6px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12),
+                        0 2px 4px rgba(0, 0, 0, 0.08);
+        }
+
+        .carta-colonna.verde:hover {
+            box-shadow: 0 6px 12px rgba(16, 185, 129, 0.25),
+                        0 3px 6px rgba(16, 185, 129, 0.2);
+        }
+
+        #menu-contestuale {
+            position: fixed;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px) saturate(180%);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12),
+                        0 4px 16px rgba(0, 0, 0, 0.08),
+                        0 0 0 1px rgba(0, 0, 0, 0.05);
+            padding: 6px;
+            display: none;
+            z-index: 2000;
+            min-width: 200px;
+            animation: menuFadeIn 0.2s ease-out;
+        }
+
+        @keyframes menuFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(-8px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .menu-item {
+            padding: 11px 16px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 15px;
+            border-radius: 8px;
+            font-weight: 500;
+            color: #1f2937;
+        }
+
+        .menu-item:hover {
+            background: #f3f4f6;
+            transform: translateX(2px);
+        }
+
+        .menu-item.rosso:hover {
+            background: rgba(220, 38, 38, 0.08);
+            color: #dc2626;
+        }
+
+        .menu-item.blu:hover {
+            background: rgba(37, 99, 235, 0.08);
+            color: #2563eb;
+        }
+
+        .menu-item.annulla:hover {
+            background: rgba(107, 114, 128, 0.08);
+            color: #6b7280;
+        }
+
+        .icona-colore {
+            width: 22px;
+            height: 22px;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15),
+                        inset 0 1px 2px rgba(255, 255, 255, 0.2);
+        }
+
+        .icona-colore.rossa {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+        }
+
+        .icona-colore.blu {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        }
+
+        #reset-btn {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #667eea;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1),
+                        0 1px 3px rgba(0, 0, 0, 0.06);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+            margin-left: -50px;
+        }
+
+        #reset-btn:hover {
+            background: white;
+            transform: translateX(-50%) translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15),
+                        0 2px 6px rgba(0, 0, 0, 0.1);
+            color: #5568d3;
+        }
+
+        #reset-btn:active {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        #calcola-btn {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border: none;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3),
+                        0 2px 6px rgba(16, 185, 129, 0.2);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+            margin-left: 50px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        #calcola-btn:hover {
+            transform: translateX(-50%) translateY(-2px);
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4),
+                        0 4px 10px rgba(16, 185, 129, 0.3);
+        }
+
+        #calcola-btn:active {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        #popup-risultati {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3),
+                        0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 40px;
+            max-width: 600px;
+            width: 90%;
+            z-index: 3000;
+            display: none;
+        }
+
+        #popup-risultati.visible {
+            display: block;
+            animation: popupFadeIn 0.3s ease-out;
+        }
+
+        .risultati-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .risultati-titolo {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 10px;
+        }
+
+        .risultati-container {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .risultato-colonna {
+            flex: 1;
+            text-align: center;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .risultato-colonna.rossa {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border: 3px solid #dc2626;
+        }
+
+        .risultato-colonna.blu {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border: 3px solid #2563eb;
+        }
+
+        .risultato-label {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .risultato-colonna.rossa .risultato-label {
+            color: #dc2626;
+        }
+
+        .risultato-colonna.blu .risultato-label {
+            color: #2563eb;
+        }
+
+        .risultato-percentuale {
+            font-size: 72px;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 10px;
+        }
+
+        .risultato-colonna.rossa .risultato-percentuale {
+            color: #dc2626;
+            text-shadow: 2px 2px 4px rgba(220, 38, 38, 0.2);
+        }
+
+        .risultato-colonna.blu .risultato-percentuale {
+            color: #2563eb;
+            text-shadow: 2px 2px 4px rgba(37, 99, 235, 0.2);
+        }
+
+        .risultato-dettaglio {
+            font-size: 14px;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .risultati-close-btn {
+            width: 100%;
+            padding: 14px;
+            background: #f3f4f6;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #374151;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .risultati-close-btn:hover {
+            background: #e5e7eb;
+        }
+
+        .contatore {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(8px);
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1),
+                        0 1px 3px rgba(0, 0, 0, 0.06);
+            text-align: center;
+            margin-bottom: 10px;
+            letter-spacing: 0.3px;
+        }
+
+        .contatore.rosso {
+            color: #ffffff;
+            background: rgba(220, 38, 38, 0.85);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .contatore.blu {
+            color: #ffffff;
+            background: rgba(37, 99, 235, 0.85);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .contatore.verde {
+            color: #ffffff;
+            background: rgba(16, 185, 129, 0.85);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            font-size: 13px;
+            padding: 8px 14px;
+        }
+
+        #popup-definizione {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3),
+                        0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            z-index: 3000;
+            display: none;
+        }
+
+        #popup-definizione.visible {
+            display: block;
+            animation: popupFadeIn 0.3s ease-out;
+        }
+
+        @keyframes popupFadeIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        #overlay-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 2999;
+            display: none;
+        }
+
+        #overlay-popup.visible {
+            display: block;
+        }
+
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .popup-titolo {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        .popup-close {
+            background: #f3f4f6;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 20px;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .popup-close:hover {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .popup-campo {
+            display: inline-block;
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .popup-definizione {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #374151;
+        }
+
+        .contatori-wrapper {
+            position: absolute;
+            bottom: 15px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <button id="reset-btn" onclick="reset()">🔄 Reset</button>
+    <button id="calcola-btn" onclick="mostraRisultati()">📊 Calcola</button>
+    
+    <!-- Colonna ROSSA a sinistra -->
+    <div id="colonna-rossa" class="colonna">
+        <h2>🔴 ROSSO (<span id="num-rosse">0</span>)</h2>
+        <div id="lista-rossa"></div>
+        <div class="contatori-wrapper">
+            <div class="contatore verde">✓ Corrette: <span id="num-verdi-rosse">0</span></div>
+        </div>
+    </div>
+    
+    <!-- Area centrale con le carte sparse -->
+    <div id="area-carte"></div>
+    
+    <!-- Colonna BLU a destra -->
+    <div id="colonna-blu" class="colonna">
+        <h2>🔵 BLU (<span id="num-blu">0</span>)</h2>
+        <div id="lista-blu"></div>
+        <div class="contatori-wrapper">
+            <div class="contatore verde">✓ Corrette: <span id="num-verdi-blu">0</span></div>
+        </div>
+    </div>
+
+    <!-- Popup definizione -->
+    <div id="overlay-popup" onclick="chiudiPopup()"></div>
+    <div id="popup-definizione">
+        <div class="popup-header">
+            <div class="popup-titolo" id="popup-titolo"></div>
+            <button class="popup-close" onclick="chiudiPopup()">✕</button>
+        </div>
+        <div class="popup-campo" id="popup-campo"></div>
+        <div class="popup-definizione" id="popup-testo"></div>
+    </div>
+
+    <!-- Popup risultati -->
+    <div id="popup-risultati">
+        <div class="risultati-header">
+            <div class="risultati-titolo">📊 Risultati</div>
+        </div>
+        <div class="risultati-container">
+            <div class="risultato-colonna rossa">
+                <div class="risultato-label">🔴 Rosso</div>
+                <div class="risultato-percentuale" id="perc-rossa">0%</div>
+                <div class="risultato-dettaglio" id="dettaglio-rosso">0 / 0</div>
+            </div>
+            <div class="risultato-colonna blu">
+                <div class="risultato-label">🔵 Blu</div>
+                <div class="risultato-percentuale" id="perc-blu">0%</div>
+                <div class="risultato-dettaglio" id="dettaglio-blu">0 / 0</div>
+            </div>
+        </div>
+        <button class="risultati-close-btn" onclick="chiudiRisultati()">Chiudi</button>
+    </div>
+
+    <!-- Menu contestuale -->
+    <div id="menu-contestuale">
+        <div class="menu-item rosso" id="menu-rosso" onclick="spostaInColonna('rossa')">
+            <div class="icona-colore rossa"></div>
+            <span>Sposta in ROSSO</span>
+        </div>
+        <div class="menu-item blu" id="menu-blu" onclick="spostaInColonna('blu')">
+            <div class="icona-colore blu"></div>
+            <span>Sposta in BLU</span>
+        </div>
+        <div class="menu-item" id="menu-verde" onclick="segnaVerde()" style="display:none;">
+            <div class="icona-colore" style="background: #10b981;"></div>
+            <span>Segna CORRETTA</span>
+        </div>
+        <div class="menu-item" id="menu-barra" onclick="barra()" style="display:none;">
+            <span>❌</span>
+            <span>Barra</span>
+        </div>
+        <div class="menu-item" id="menu-info" onclick="mostraInfo()" style="display:none;">
+            <span>ℹ️</span>
+            <span>Info</span>
+        </div>
+        <div class="menu-item annulla" onclick="riportaCentro()">
+            <span>↩️</span>
+            <span>Riporta al centro</span>
+        </div>
+    </div>
+
+    <script>
+        // Array delle 60 parole
+        const parole = [
+            // Ferroviarie (20) - SENZA definizione
+            "Macaco", "Marmotta", "Scartamento", "Ballast", "Euro-balise",
+            "Dispaccio", "Fioretto", "Respingente", "Apparato Centrale", "Sottostazione Elettrica",
+            "Blocco Conta Assi", "Contatto Funghi", "Sala Montata", "Pantografo", "Spazio Nocivo",
+            "Raccordo", "Piattaforma Girevole", "Sghembo", "Stazionamento", "Grado di Prestazione",
+            // Automobilismo (10) - CON definizione
+            "Differenziale Autobloccante", "Basculante", "Detonazione", "Frazionamento di Coppia",
+            "Sottosterzo", "Campanatura", "Semaforo", "Sovraviraggio", "Antirollio", "Biellismo",
+            // Navigazione (10) - CON definizione
+            "Ormeggiatrice", "Timone Compensato", "Bulbo di Prua", "Pescaggio",
+            "Deriva Anti-Scarroccio", "Gavone", "Paramezzale", "Bozzello", "Scalmiera", "Grisella",
+            // Aerei (10) - CON definizione
+            "Ipersostentatore", "Alettone Fessurato", "Barra di Torsione", "Equilibratore",
+            "Carenatura Ventrale", "Compensatore di Rollio", "Flap Soffiato", "Alula", "Ipersostentazione", "Deriva",
+            // Nuove ferroviarie (10) - CON definizione
+            "Contraccambio", "Deviatoio", "Tallone", "Punta", "Intervia",
+            "Rotabile", "Bitta di Fermata", "Cantonamento", "Presa di Terra", "Impedenza"
+        ];
+
+        // Database definizioni (solo per le 40 parole NON originali)
+        const definizioni = {
+            // Automobilismo
+            "Differenziale Autobloccante": {
+                campo: "Automobilismo",
+                definizione: "Dispositivo meccanico che limita la differenza di velocità tra le ruote motrici, migliorando la trazione in curva e su fondi a bassa aderenza distribuendo la coppia in modo più efficace."
+            },
+            "Basculante": {
+                campo: "Automobilismo",
+                definizione: "Elemento della sospensione posteriore di motocicli e alcune auto sportive che collega il perno del forcellone al telaio, permettendo l'oscillazione controllata della ruota."
+            },
+            "Detonazione": {
+                campo: "Automobilismo",
+                definizione: "Combustione anomala del carburante che avviene in modo esplosivo invece che progressivo, causando il caratteristico rumore metallico detto 'battito in testa' e potenziali danni al motore."
+            },
+            "Frazionamento di Coppia": {
+                campo: "Automobilismo",
+                definizione: "Tecnica di distribuzione della coppia motrice tra gli assali o le singole ruote mediante differenziali controllati elettronicamente, ottimizzando trazione e stabilità."
+            },
+            "Sottosterzo": {
+                campo: "Automobilismo",
+                definizione: "Comportamento dinamico del veicolo in cui l'avantreno tende ad allargare la traiettoria in curva rispetto all'angolo di sterzata impostato dal pilota, tipico delle auto a trazione anteriore."
+            },
+            "Campanatura": {
+                campo: "Automobilismo",
+                definizione: "Angolo di inclinazione della ruota rispetto alla verticale visto frontalmente. Può essere negativa (parte alta inclinata verso l'interno) o positiva, influenzando aderenza e usura."
+            },
+            "Semaforo": {
+                campo: "Automobilismo",
+                definizione: "Dispositivo di segnalazione luminosa che regola il flusso veicolare e pedonale nelle intersezioni stradali mediante luci colorate secondo uno schema temporizzato o a chiamata."
+            },
+            "Sovraviraggio": {
+                campo: "Automobilismo",
+                definizione: "Comportamento dinamico in cui il retrotreno perde aderenza in curva, causando la tendenza del veicolo a chiudere eccessivamente la traiettoria fino allo scodinzolamento."
+            },
+            "Antirollio": {
+                campo: "Automobilismo",
+                definizione: "Barra di torsione metallica che collega le sospensioni di uno stesso asse, contrastando il rollio della carrozzeria in curva e migliorando la stabilità laterale."
+            },
+            "Biellismo": {
+                campo: "Automobilismo",
+                definizione: "Sistema articolato composto da bielle e leveraggi che trasforma il moto alternato dei pistoni in moto rotatorio dell'albero motore, o viceversa nei sistemi di sospensione."
+            },
+            
+            // Navigazione
+            "Ormeggiatrice": {
+                campo: "Navigazione",
+                definizione: "Imbarcazione di servizio portuale dotata di potenti verricelli utilizzata per assistere le grandi navi nelle manovre di ormeggio, gestendo cime e cavi di tonnellaggio elevato."
+            },
+            "Timone Compensato": {
+                campo: "Navigazione",
+                definizione: "Timone la cui superficie è parzialmente estesa oltre l'asse di rotazione, riducendo lo sforzo necessario alla sua movimentazione grazie all'azione idrodinamica della parte anteriore."
+            },
+            "Bulbo di Prua": {
+                campo: "Navigazione",
+                definizione: "Protuberanza arrotondata sommersa sulla prua della nave che riduce la resistenza idrodinamica generando un'onda che interferisce costruttivamente con l'onda di prua, migliorando l'efficienza."
+            },
+            "Pescaggio": {
+                campo: "Navigazione",
+                definizione: "Distanza verticale tra la linea di galleggiamento e il punto più basso della carena, determinante per stabilire i fondali minimi navigabili e la capacità di carico dell'imbarcazione."
+            },
+            "Deriva Anti-Scarroccio": {
+                campo: "Navigazione",
+                definizione: "Appendice verticale mobile o fissa posta sotto lo scafo che contrasta lo scarroccio laterale causato dal vento, migliorando la capacità di risalita delle barche a vela."
+            },
+            "Gavone": {
+                campo: "Navigazione",
+                definizione: "Compartimento stagno ricavato nella prua o nella poppa dell'imbarcazione, utilizzato per lo stivaggio di catene, cime, ancore e attrezzature nautiche mantenendole separate dagli spazi abitabili."
+            },
+            "Paramezzale": {
+                campo: "Navigazione",
+                definizione: "Struttura longitudinale di rinforzo dello scafo che corre parallela alla chiglia per tutta la lunghezza dell'imbarcazione, aumentando la rigidità strutturale e distribuendo i carichi."
+            },
+            "Bozzello": {
+                campo: "Navigazione",
+                definizione: "Carrucola nautica con pulegge di vario diametro montate su cuscinetti, utilizzata per il rinvio e la demultiplicazione dello sforzo nelle manovre di cime e scotte."
+            },
+            "Scalmiera": {
+                campo: "Navigazione",
+                definizione: "Scalmo rinforzato o forcella metallica fissata al bordo dell'imbarcazione che funge da punto di appoggio e rotazione per il remo durante la voga, impedendone lo sfilamento."
+            },
+            "Grisella": {
+                campo: "Navigazione",
+                definizione: "Anello metallico rotante che collega l'asta dell'ancora alla catena, permettendo la rotazione libera e impedendo l'attorcigliamento della catena durante le manovre di ancoraggio."
+            },
+            
+            // Aerei
+            "Ipersostentatore": {
+                campo: "Aviazione",
+                definizione: "Superficie mobile aerodinamica posta sul bordo d'attacco o d'uscita alare che, quando estesa, aumenta la curvatura e l'area del profilo alare incrementando la portanza a basse velocità."
+            },
+            "Alettone Fessurato": {
+                campo: "Aviazione",
+                definizione: "Superfice di controllo laterale con una fessura che permette il passaggio d'aria ad alta energia dalla parte inferiore a quella superiore, ritardando lo stallo e aumentando l'efficacia."
+            },
+            "Barra di Torsione": {
+                campo: "Aviazione",
+                definizione: "Elemento elastico del carrello d'atterraggio costituito da una barra metallica che si torce assorbendo l'energia dell'impatto, fungendo da ammortizzatore attraverso la propria elasticità torsionale."
+            },
+            "Equilibratore": {
+                campo: "Aviazione",
+                definizione: "Superficie mobile collegata al timone di profondità che permette al pilota di bilanciare le forze aerodinamiche sui comandi, mantenendo l'assetto desiderato senza sforzo continuo sulla cloche."
+            },
+            "Carenatura Ventrale": {
+                campo: "Aviazione",
+                definizione: "Rivestimento aerodinamico della parte inferiore della fusoliera che racchiude componenti strutturali, sistemi e vani di carico, riducendo la resistenza aerodinamica e proteggendo gli elementi interni."
+            },
+            "Compensatore di Rollio": {
+                campo: "Aviazione",
+                definizione: "Dispositivo che genera automaticamente una forza correttiva proporzionale alla velocità di rollio, smorzando le oscillazioni laterali e aumentando la stabilità dinamica dell'aeromobile."
+            },
+            "Flap Soffiato": {
+                campo: "Aviazione",
+                definizione: "Sistema ipersostentatore in cui aria compressa prelevata dai motori viene soffiata sulla superficie superiore dei flap, ritardando il distacco del flusso e incrementando notevolmente la portanza."
+            },
+            "Alula": {
+                campo: "Aviazione",
+                definizione: "Piccola superficie mobile sul bordo d'attacco alare che, se estesa automaticamente ad alti angoli d'incidenza, canalizza aria ad alta energia sullo strato limite ritardando lo stallo."
+            },
+            "Ipersostentazione": {
+                campo: "Aviazione",
+                definizione: "Condizione ottenuta mediante l'estensione di dispositivi ipersostentatori (flap, slat) che modificano la geometria alare per massimizzare la portanza durante decollo e atterraggio a bassa velocità."
+            },
+            "Deriva": {
+                campo: "Aviazione",
+                definizione: "Superficie verticale fissa della coda dell'aeromobile che fornisce stabilità direzionale, sulla quale è incernierato il timone per il controllo dell'imbardata."
+            },
+            
+            // Ferroviarie aggiuntive
+            "Contraccambio": {
+                campo: "Ferrovie",
+                definizione: "Dispositivo di sicurezza nei deviatoi che impedisce il movimento accidentale degli aghi quando questi sono sotto carico, garantendo che il binario selezionato rimanga bloccato durante il transito."
+            },
+            "Deviatoio": {
+                campo: "Ferrovie",
+                definizione: "Apparato di binario che permette al materiale rotabile di passare da un binario all'altro attraverso la movimentazione di aghi mobili che orientano le ruote sulla traiettoria desiderata."
+            },
+            "Tallone": {
+                campo: "Ferrovie",
+                definizione: "Estremità posteriore dell'ago mobile del deviatoio, opposta alla punta, dove l'ago si collega rigidamente alla tiranteria di comando per la movimentazione."
+            },
+            "Punta": {
+                campo: "Ferrovie",
+                definizione: "Estremità affilata e mobile dell'ago del deviatoio che, aderendo perfettamente alla controrotaia, guida il bordino della ruota verso il binario deviato o quello diretto."
+            },
+            "Intervia": {
+                campo: "Ferrovie",
+                definizione: "Distanza minima prescritta tra gli assi di due binari paralleli, calcolata per garantire il transito simultaneo di rotabili senza interferenze considerando ingombri massimi e oscillazioni."
+            },
+            "Rotabile": {
+                campo: "Ferrovie",
+                definizione: "Termine generico che indica qualunque veicolo ferroviario circolante su rotaia, compresi locomotive, carrozze, carri merci e rotabili specializzati per manutenzione o misure."
+            },
+            "Bitta di Fermata": {
+                campo: "Ferrovie",
+                definizione: "Dispositivo terminale di binario tronco costituito da una robusta struttura metallica o in calcestruzzo che arresta la corsa del rotabile impedendone il deragliamento oltre il punto consentito."
+            },
+            "Cantonamento": {
+                campo: "Ferrovie",
+                definizione: "Sistema di segnalamento che suddivide una linea ferroviaria in tratte chiamate cantoni, all'interno delle quali può sostare un solo treno per volta, garantendo la distanziamento di sicurezza."
+            },
+            "Presa di Terra": {
+                campo: "Ferrovie",
+                definizione: "Collegamento elettrico intenzionale tra l'impianto ferroviario e il terreno che garantisce la dispersione delle correnti di guasto, proteggendo persone e apparecchiature da tensioni pericolose."
+            },
+            "Impedenza": {
+                campo: "Ferrovie",
+                definizione: "Grandezza elettrica che misura l'opposizione al passaggio della corrente alternata in un circuito di trazione, fondamentale per il calcolo delle cadute di tensione e delle protezioni."
+            }
+        };
+
+        let statoParole = {}; // {colonna: null/'rossa'/'blu', stato: null/'verde'/'barrata'}
+        let cartaCorrente = null; // Per sapere su quale carta è stato fatto click destro
+
+        function creaCarteSparseCasualmente() {
+            const areaCarte = document.getElementById('area-carte');
+            const larghezza = areaCarte.offsetWidth;
+            const altezza = areaCarte.offsetHeight;
+            
+            // Crea un elemento temporaneo per misurare le dimensioni delle parole
+            const temp = document.createElement('div');
+            temp.className = 'carta';
+            temp.style.visibility = 'hidden';
+            temp.style.position = 'absolute';
+            areaCarte.appendChild(temp);
+            
+            // Trova la larghezza massima necessaria
+            let maxLarghezza = 0;
+            parole.forEach(parola => {
+                temp.textContent = parola;
+                const larghezzaCarta = temp.offsetWidth;
+                if (larghezzaCarta > maxLarghezza) {
+                    maxLarghezza = larghezzaCarta;
+                }
+            });
+            
+            const altezzaCarta = temp.offsetHeight;
+            areaCarte.removeChild(temp);
+            
+            // TUTTE le carte avranno ESATTAMENTE questa larghezza
+            const larghezzaUniforme = maxLarghezza;
+            
+            // Dimensioni celle uniformi con margine ridotto
+            const cellaLarghezza = larghezzaUniforme + 20;
+            const cellaAltezza = altezzaCarta + 20;
+            
+            // Margini ridotti per riempire meglio
+            const margineOrizzontale = 40;
+            const margineVerticale = 30;
+            
+            // Calcola quante celle entrano
+            const areaUtileLarghezza = larghezza - (2 * margineOrizzontale);
+            const areaUtileAltezza = altezza - (2 * margineVerticale);
+            
+            const cols = Math.floor(areaUtileLarghezza / cellaLarghezza);
+            const rows = Math.floor(areaUtileAltezza / cellaAltezza);
+            
+            // Centra la griglia nell'area disponibile
+            const grigliaLarghezzaTotale = cols * cellaLarghezza;
+            const grigliaAltezzaTotale = rows * cellaAltezza;
+            const offsetX = margineOrizzontale + (areaUtileLarghezza - grigliaLarghezzaTotale) / 2;
+            const offsetY = margineVerticale + (areaUtileAltezza - grigliaAltezzaTotale) / 2;
+            
+            // Crea array di tutte le posizioni disponibili
+            const posizioniDisponibili = [];
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    posizioniDisponibili.push({row: r, col: c});
+                }
+            }
+            
+            // Mescola le posizioni
+            for (let i = posizioniDisponibili.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [posizioniDisponibili[i], posizioniDisponibili[j]] = [posizioniDisponibili[j], posizioniDisponibili[i]];
+            }
+            
+            // Posiziona le carte perfettamente allineate
+            parole.forEach((parola, index) => {
+                if (index >= posizioniDisponibili.length) return;
+                
+                const carta = document.createElement('div');
+                carta.className = 'carta';
+                carta.textContent = parola;
+                carta.dataset.index = index;
+                
+                // FORZA tutte le carte alla stessa larghezza
+                carta.style.width = larghezzaUniforme + 'px';
+                
+                const pos = posizioniDisponibili[index];
+                
+                // Posizione esatta al centro della cella
+                const x = offsetX + (pos.col * cellaLarghezza) + (cellaLarghezza / 2);
+                const y = offsetY + (pos.row * cellaAltezza) + (cellaAltezza / 2);
+                
+                carta.style.left = x + 'px';
+                carta.style.top = y + 'px';
+                carta.style.transform = 'translate(-50%, -50%)';
+                
+                // Click destro sulla carta
+                carta.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    cartaCorrente = index;
+                    mostraMenuPerCarta(e.pageX, e.pageY, null);
+                });
+                
+                areaCarte.appendChild(carta);
+                statoParole[index] = {colonna: null, stato: null};
+            });
+        }
+
+        function mostraMenuPerCarta(x, y, colonna) {
+            const menu = document.getElementById('menu-contestuale');
+            const menuRosso = document.getElementById('menu-rosso');
+            const menuBlu = document.getElementById('menu-blu');
+            const menuVerde = document.getElementById('menu-verde');
+            const menuBarra = document.getElementById('menu-barra');
+            const menuInfo = document.getElementById('menu-info');
+            
+            // Verifica se la parola corrente ha una definizione
+            const parolaCorrente = parole[cartaCorrente];
+            const haDefinizione = definizioni[parolaCorrente] !== undefined;
+            
+            // Se è già in una colonna, mostra opzioni verde/barra/info invece di rosso/blu
+            if (colonna === 'rossa' || colonna === 'blu') {
+                menuRosso.style.display = 'none';
+                menuBlu.style.display = 'none';
+                menuVerde.style.display = 'flex';
+                menuBarra.style.display = 'flex';
+                menuInfo.style.display = haDefinizione ? 'flex' : 'none';
+            } else {
+                menuRosso.style.display = 'flex';
+                menuBlu.style.display = 'flex';
+                menuVerde.style.display = 'none';
+                menuBarra.style.display = 'none';
+                menuInfo.style.display = 'none';
+            }
+            
+            menu.style.display = 'block';
+            menu.style.left = x + 'px';
+            menu.style.top = y + 'px';
+        }
+
+        function mostraInfo() {
+            if (cartaCorrente === null) return;
+            
+            const parola = parole[cartaCorrente];
+            const info = definizioni[parola];
+            
+            if (!info) return;
+            
+            document.getElementById('popup-titolo').textContent = parola;
+            document.getElementById('popup-campo').textContent = info.campo;
+            document.getElementById('popup-testo').textContent = info.definizione;
+            
+            document.getElementById('overlay-popup').classList.add('visible');
+            document.getElementById('popup-definizione').classList.add('visible');
+            
+            nascondiMenu();
+        }
+
+        function chiudiPopup() {
+            document.getElementById('overlay-popup').classList.remove('visible');
+            document.getElementById('popup-definizione').classList.remove('visible');
+        }
+
+        function mostraRisultati() {
+            // Conta le risposte corrette per colonna
+            let totaleRosse = 0;
+            let corretteRosse = 0;
+            let totaleBlu = 0;
+            let correcteBlu = 0;
+
+            Object.keys(statoParole).forEach(index => {
+                const {colonna, stato} = statoParole[index];
+                
+                if (colonna === 'rossa') {
+                    totaleRosse++;
+                    if (stato === 'verde') corretteRosse++;
+                } else if (colonna === 'blu') {
+                    totaleBlu++;
+                    if (stato === 'verde') correcteBlu++;
+                }
+            });
+
+            // Calcola percentuali
+            const percRossa = totaleRosse > 0 ? Math.round((corretteRosse / totaleRosse) * 100) : 0;
+            const percBlu = totaleBlu > 0 ? Math.round((correcteBlu / totaleBlu) * 100) : 0;
+
+            // Aggiorna il popup
+            document.getElementById('perc-rossa').textContent = percRossa + '%';
+            document.getElementById('perc-blu').textContent = percBlu + '%';
+            document.getElementById('dettaglio-rosso').textContent = `${corretteRosse} corrette su ${totaleRosse}`;
+            document.getElementById('dettaglio-blu').textContent = `${correcteBlu} corrette su ${totaleBlu}`;
+
+            // Mostra il popup
+            document.getElementById('overlay-popup').classList.add('visible');
+            document.getElementById('popup-risultati').classList.add('visible');
+        }
+
+        function chiudiRisultati() {
+            document.getElementById('overlay-popup').classList.remove('visible');
+            document.getElementById('popup-risultati').classList.remove('visible');
+        }
+
+        function nascondiMenu() {
+            document.getElementById('menu-contestuale').style.display = 'none';
+        }
+
+        function spostaInColonna(colore) {
+            if (cartaCorrente === null) return;
+            
+            // Se è al centro, nascondila
+            const carta = document.querySelector(`.carta[data-index="${cartaCorrente}"]`);
+            if (carta && statoParole[cartaCorrente].colonna === null) {
+                carta.classList.add('nascosta');
+            }
+            
+            // Aggiorna lo stato
+            statoParole[cartaCorrente].colonna = colore;
+            statoParole[cartaCorrente].stato = null; // Reset stato quando si sposta
+            aggiornaColonne();
+            nascondiMenu();
+        }
+
+        function segnaVerde() {
+            if (cartaCorrente === null) return;
+            
+            const statoAttuale = statoParole[cartaCorrente].stato;
+            // Toggle: se è già verde, torna normale
+            statoParole[cartaCorrente].stato = (statoAttuale === 'verde') ? null : 'verde';
+            aggiornaColonne();
+            nascondiMenu();
+        }
+
+        function barra() {
+            if (cartaCorrente === null) return;
+            
+            const statoAttuale = statoParole[cartaCorrente].stato;
+            // Toggle: se è già barrata, torna normale
+            statoParole[cartaCorrente].stato = (statoAttuale === 'barrata') ? null : 'barrata';
+            aggiornaColonne();
+            nascondiMenu();
+        }
+
+        function riportaCentro() {
+            if (cartaCorrente === null) return;
+            
+            const carta = document.querySelector(`.carta[data-index="${cartaCorrente}"]`);
+            if (carta) {
+                carta.classList.remove('nascosta');
+            }
+            
+            statoParole[cartaCorrente] = {colonna: null, stato: null};
+            aggiornaColonne();
+            nascondiMenu();
+        }
+
+        function aggiornaColonne() {
+            const listaRossa = document.getElementById('lista-rossa');
+            const listaBlu = document.getElementById('lista-blu');
+            
+            listaRossa.innerHTML = '';
+            listaBlu.innerHTML = '';
+            
+            let contRosse = 0;
+            let contBlu = 0;
+            let contVerdiRosse = 0;
+            let contVerdiBlu = 0;
+
+            // Aggiungi le parole nelle rispettive colonne
+            Object.keys(statoParole).forEach(index => {
+                const {colonna, stato} = statoParole[index];
+                
+                if (colonna === 'rossa') {
+                    const div = document.createElement('div');
+                    div.className = 'carta-colonna rossa';
+                    
+                    // Aggiungi classi per stato
+                    if (stato === 'verde') {
+                        div.classList.add('verde');
+                        contVerdiRosse++;
+                    }
+                    if (stato === 'barrata') div.classList.add('barrata');
+                    
+                    div.textContent = parole[index];
+                    div.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        cartaCorrente = parseInt(index);
+                        mostraMenuPerCarta(e.pageX, e.pageY, 'rossa');
+                    });
+                    listaRossa.appendChild(div);
+                    contRosse++;
+                } else if (colonna === 'blu') {
+                    const div = document.createElement('div');
+                    div.className = 'carta-colonna blu';
+                    
+                    // Aggiungi classi per stato
+                    if (stato === 'verde') {
+                        div.classList.add('verde');
+                        contVerdiBlu++;
+                    }
+                    if (stato === 'barrata') div.classList.add('barrata');
+                    
+                    div.textContent = parole[index];
+                    div.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        cartaCorrente = parseInt(index);
+                        mostraMenuPerCarta(e.pageX, e.pageY, 'blu');
+                    });
+                    listaBlu.appendChild(div);
+                    contBlu++;
+                }
+            });
+
+            // Aggiorna contatori
+            document.getElementById('num-rosse').textContent = contRosse;
+            document.getElementById('num-blu').textContent = contBlu;
+            document.getElementById('num-verdi-rosse').textContent = contVerdiRosse;
+            document.getElementById('num-verdi-blu').textContent = contVerdiBlu;
+        }
+
+        function reset() {
+            // Riporta tutte le carte al centro
+            Object.keys(statoParole).forEach(index => {
+                statoParole[index] = {colonna: null, stato: null};
+                const carta = document.querySelector(`.carta[data-index="${index}"]`);
+                if (carta) {
+                    carta.classList.remove('nascosta');
+                }
+            });
+            
+            aggiornaColonne();
+            nascondiMenu();
+        }
+
+        // Chiudi il menu se si clicca altrove
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#menu-contestuale')) {
+                nascondiMenu();
+            }
+        });
+
+        // Previeni il menu contestuale del browser ovunque
+        document.addEventListener('contextmenu', (e) => {
+            if (!e.target.closest('.carta') && !e.target.closest('.carta-colonna')) {
+                e.preventDefault();
+            }
+        });
+
+        // Gestione overlay - chiude il popup attivo
+        document.getElementById('overlay-popup').addEventListener('click', function() {
+            // Verifica quale popup è aperto e chiudi quello
+            if (document.getElementById('popup-definizione').classList.contains('visible')) {
+                chiudiPopup();
+            } else if (document.getElementById('popup-risultati').classList.contains('visible')) {
+                chiudiRisultati();
+            }
+        });
+
+        // Inizializza le carte al caricamento della pagina
+        window.onload = () => {
+            creaCarteSparseCasualmente();
+        };
+    </script>
+</body>
+</html>
