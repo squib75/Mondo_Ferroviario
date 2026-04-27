@@ -976,11 +976,12 @@
                 menuBarra.style.display = 'flex';
                 menuInfo.style.display = haDefinizione ? 'flex' : 'none';
             } else {
+                // Al centro: mostra rosso/blu e Info se ha definizione
                 menuRosso.style.display = 'flex';
                 menuBlu.style.display = 'flex';
                 menuVerde.style.display = 'none';
                 menuBarra.style.display = 'none';
-                menuInfo.style.display = 'none';
+                menuInfo.style.display = haDefinizione ? 'flex' : 'none';
             }
             
             menu.style.display = 'block';
